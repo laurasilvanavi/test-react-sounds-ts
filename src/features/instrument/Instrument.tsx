@@ -2,6 +2,7 @@ import { Button } from '@mui/material';
 import './Instrument.css';
 import { Synth, Volume, Sampler, Destination, PolySynth, Transport, Part, Noise, AutoFilter, Player } from 'tone'
 import { BASS_CHORDS, GAMMA_NOTES, MARIO_SAMPLES, MELODY_CHORDS } from '../../constants/notes'
+import { useRef, useState } from 'react';
 const DogSample = require("../../assets/dog-sample.mp3");
 
 const keyStyles = {
@@ -11,24 +12,23 @@ const keyStyles = {
 };
 
 export const Instrument = () => {
-  // @TODO: work on initializing only once (useEffect/useMemo?)
-  const mediumVolume = new Volume(-15);
+  console.log('render')
+  // @TODO: separate to piaoa nd predefined isntruments
 
-  const sampler = new Sampler({
+  const [isTransportStarted, setIsTransportStarted] = useState(false);
+  const [melodyPart, setMelodyPart] = useState<Part | null>(null);
+  const [bassPart, setBassPart] = useState<Part | null>(null);
+  const [noise, setNoise] = useState<Noise | null>(null);
+
+  const mediumVolume = useRef(new Volume(-15)).current;
+  const sampler = useRef(new Sampler({
     E4: DogSample,
-  }).chain(mediumVolume, Destination);
-
-  const polySynthSquare = new PolySynth(Synth, {
+  }).chain(mediumVolume, Destination)).current;
+  const polySynthSquare = useRef(new PolySynth(Synth, {
     oscillator: {
       type: "square",
     },
-  }).chain(new Volume(-25), Destination);
-
-  // buuu
-  let isTransportStarted: boolean = false;
-  let melodyPart: Part | null = null;
-  let bassPart: Part | null = null;
-  let noise: Noise | null = null;
+  }).chain(new Volume(-25), Destination)).current;
 
   function playNote(note: string) {
     polySynthSquare.triggerAttackRelease(note, "8n");
@@ -39,7 +39,7 @@ export const Instrument = () => {
   function playPart(part: Part) {
     if (!isTransportStarted) {
       Transport.toggle();
-      isTransportStarted = true;
+      setIsTransportStarted(true)
       Transport.bpm.value = 132;
     }
 
@@ -62,8 +62,7 @@ export const Instrument = () => {
           release: 0.4,
         },
       }).chain(mediumVolume, Destination);
-
-      melodyPart = new Part((time, chord) => {
+      const melody = new Part((time, chord) => {
         sampler.triggerAttackRelease(chord.note, chord.duration, time);
         polySynthSaw.triggerAttackRelease(
           chord.note,
@@ -72,7 +71,9 @@ export const Instrument = () => {
         );
       }, MELODY_CHORDS);
 
-      playPart(melodyPart);
+      // maybe can be used only hook value and setting without extra const
+      playPart(melody);
+      setMelodyPart(melody);
     }
   }
 
@@ -80,7 +81,7 @@ export const Instrument = () => {
     if (bassPart) {
       bassPart.mute = !bassPart.mute;
     } else {
-      bassPart = new Part((time, chord) => {
+      const bass = new Part((time, chord) => {
         polySynthSquare.triggerAttackRelease(
           chord.note,
           chord.duration,
@@ -88,7 +89,8 @@ export const Instrument = () => {
         );
       }, BASS_CHORDS);
 
-      playPart(bassPart);
+      playPart(bass);
+      setBassPart(bass)
     }
   }
 
@@ -96,12 +98,14 @@ export const Instrument = () => {
     if (noise) {
       noise.mute = !noise.mute;
     } else {
-      noise = new Noise("pink").start();
+      const noiseSounds = new Noise("pink").start();
       const filter = new AutoFilter({
         frequency: "8m",
       }).chain(new Volume(-20), Destination);
 
-      noise.connect(filter);
+      setNoise(noiseSounds)
+
+      noiseSounds.connect(filter);
       filter.start();
     }
   }
