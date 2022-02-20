@@ -21,17 +21,37 @@ const polySynthSquare = new PolySynth(Synth, {
 }).chain(new Volume(-25), Destination);
 
 export const Instrument = () => {
-  // @TODO: separate to piaoa nd predefined isntruments
+  return (
+    <div className="Instrument">
+      <Keys></Keys>
+      <div className="PredefinedMusic">
+        <PredefinedMusic></PredefinedMusic>
+      </div>
+    </div>
 
-  const isTransportStarted = useRef(false);
-  const melodyPart = useRef<Part | null>(null);
-  const bassPart = useRef<Part | null>(null);
-  const noise = useRef<Noise | null>(null);
+  );
+}
 
+export const Keys = () => {
   function playNote(note: string) {
     polySynthSquare.triggerAttackRelease(note, "8n");
     sampler.triggerAttack(note);
   }
+
+  return (
+    <div>
+      {GAMMA_NOTES.map(note => (
+        <Button onClick={() => playNote(note)} key={note} sx={keyStyles}>♪ {note}</Button>
+      ))}
+    </div>
+  );
+}
+
+export const PredefinedMusic = () => {
+  const isTransportStarted = useRef(false);
+  const melodyPart = useRef<Part | null>(null);
+  const bassPart = useRef<Part | null>(null);
+  const noise = useRef<Noise | null>(null);
 
   function playPart(part: Part) {
     if (!isTransportStarted.current) {
@@ -45,7 +65,6 @@ export const Instrument = () => {
     part.loopEnd = "4m";
   }
 
-  // @TODO: maybe move to separate components, maybe same file
   function toggleMelody() {
     if (melodyPart.current) {
       melodyPart.current.mute = !melodyPart.current.mute;
@@ -135,21 +154,13 @@ export const Instrument = () => {
   }
 
   return (
-    <div className="Instrument">
-      <div>
-        {GAMMA_NOTES.map(note => (
-          <Button onClick={() => playNote(note)} key={note} sx={keyStyles}>♪ {note}</Button>
-        ))}
-      </div>
-      <div className="PredefinedMusic">
-        <Button onClick={toggleMelody}>🎹 Melody</Button>
-        <Button onClick={toggleBass}>🎸 Bass</Button>
-        <Button onClick={toggleNoise}>💨 Noise</Button>
-        <Button onClick={playRandomMarioSample}>🍄 Mario</Button>
-        <Button onClick={speedUpBpm}>👟 Speed up</Button>
-        <Button onClick={stopInstruments}>🖐 Stop</Button>
-      </div>
-    </div>
-
+    <>
+      <Button onClick={toggleMelody}>🎹 Melody</Button>
+      <Button onClick={toggleBass}>🎸 Bass</Button>
+      <Button onClick={toggleNoise}>💨 Noise</Button>
+      <Button onClick={playRandomMarioSample}>🍄 Mario</Button>
+      <Button onClick={speedUpBpm}>👟 Speed up</Button>
+      <Button onClick={stopInstruments}>🖐 Stop</Button>
+    </>
   );
 }
