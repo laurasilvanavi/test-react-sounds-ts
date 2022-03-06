@@ -1,8 +1,9 @@
 import { Button } from '@mui/material';
 import './Instrument.css';
 import { Synth, Volume, Sampler, Destination, PolySynth, Transport, Part, Noise, AutoFilter, Player } from 'tone'
-import { BASS_CHORDS, GAMMA_NOTES, MARIO_SAMPLES, MELODY_CHORDS } from '../../constants/notes'
-import { useRef } from 'react';
+import { BASS_CHORDS, GAMMA_NOTES, MARIO_SAMPLES, MELODY_CHORDS, JUMP_SONG } from '../../constants/notes'
+import { useRef, useEffect } from 'react';
+import * as mm from '@magenta/music';
 const DogSample = require("../../assets/dog-sample.mp3");
 
 const keyStyles = {
@@ -21,12 +22,14 @@ const polySynthSquare = new PolySynth(Synth, {
 }).chain(new Volume(-25), Destination);
 
 export const Instrument = () => {
+
   return (
     <div className="Instrument">
       <Keys></Keys>
-      <div className="PredefinedMusic">
+      <div className="Section">
         <PredefinedMusic></PredefinedMusic>
       </div>
+      <div className="Section"><AIMusic></AIMusic></div>
     </div>
 
   );
@@ -161,6 +164,61 @@ export const PredefinedMusic = () => {
       <Button onClick={playRandomMarioSample}>🍄 Mario</Button>
       <Button onClick={speedUpBpm}>👟 Speed up</Button>
       <Button onClick={stopInstruments}>🖐 Stop</Button>
+    </>
+  );
+}
+
+const mmPlayer = new mm.Player();
+
+const musicRNN = new mm.MusicRNN('https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/basic_rnn');
+const musicVAE = new mm.MusicVAE('https://storage.googleapis.com/magentadata/js/checkpoints/music_vae/mel_4bar_small_q2');
+
+const steps = 60;
+const temperature = 1.5;
+const stepsPerQuarter = 4;
+export const AIMusic = () => {
+  useEffect(() => {
+    musicRNN.initialize();
+    musicVAE.initialize();
+  }, []);
+
+  function playOriginalSong() {
+    if (mmPlayer.isPlaying()) {
+      mmPlayer.stop();
+    } else {
+      mmPlayer.start(JUMP_SONG);
+    }
+  }
+
+  function continueSongWithAI() {
+    if (mmPlayer.isPlaying()) {
+      mmPlayer.stop();
+    } else {
+      const quantizedNotes = mm.sequences.quantizeNoteSequence(JUMP_SONG, stepsPerQuarter);
+
+      musicRNN
+        .continueSequence(quantizedNotes, steps, temperature)
+        .then((sample) => mmPlayer.start(sample))
+        .catch((err: any) => console.log(err));
+    }
+  }
+
+  function playNewSongWithAI() {
+    if (mmPlayer.isPlaying()) {
+      mmPlayer.stop();
+      return;
+    } else {
+      musicVAE
+        .sample(1, temperature)
+        .then((samples) => mmPlayer.start(samples[0]));
+    }
+  }
+
+  return (
+    <>
+      <Button onClick={playOriginalSong}>⭐️ Original</Button>
+      <Button onClick={continueSongWithAI}>🌟 AI continues</Button>
+      <Button onClick={playNewSongWithAI}>👶 AI new song</Button>
     </>
   );
 }
